@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "emb3d"
+version = "0.1.0"
+description = "emb3d.co command line inteface to work with embeddings."
+authors = ["Akhil Ravidas <ar@mod0.ai>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+typer = {extras = ["all"], version = "^0.9.0"}
+tiktoken = "^0.5.1"
+tokenizers = "^0.14.0"
+cohere = "^4.27"
+aiolimiter = "^1.1.0"
+httpx = "^0.25.0"
+openai = "^0.28.1"
+numpy = "*"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
