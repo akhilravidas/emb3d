@@ -6,10 +6,12 @@ import logging
 import os
 from pathlib import Path
 from typing import Optional
+from uuid import uuid4
 
 import typer
 from rich.prompt import Confirm, Prompt
 
+import reader
 from etypes import Backend, EmbedJob
 from job import run
 
@@ -28,7 +30,7 @@ def main(
     output_file: Optional[Path] = None,
     api_key: Optional[str] = None):
     if input_file is None:
-        input_file = Path(Prompt.ask("Enter the input file path"))
+        input_file = Path(Prompt.ask("Enter the input file path", default="input-2.jsonl"))
         if not input_file.exists():
             raise typer.BadParameter(f"File {input_file} does not exist, aborting...")
         if not input_file.is_file():
@@ -55,10 +57,11 @@ def main(
     if api_key is None:
         api_key = Prompt.ask(f"Enter your [red][bold]{backend.value} API key[/bold][/red]").strip()
 
-    job = EmbedJob(in_file=input_file, model_id=model_id, out_file=output_file, api_key=api_key)
+    num_records = sum(1 for _ in reader.line(input_file))
+
+    job = EmbedJob(job_id=str(uuid4()), in_file=input_file, model_id=model_id, out_file=output_file, api_key=api_key, total_records=num_records)
     asyncio.run(run(job))
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
     app()
