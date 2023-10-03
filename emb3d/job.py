@@ -133,13 +133,13 @@ async def consume(job: EmbedJob, rate_limiter: AsyncLimiter, job_queue: asyncio.
     """
     Consumer task that consumes batches from the queue and generates embeddings.
     """
-    return await asyncio.gather(*[worker(job, rate_limiter, job_queue, num_retries) for _ in range(job.max_workers)], return_exceptions=True)
+    return await asyncio.gather(*[worker(job, rate_limiter, job_queue, num_retries) for _ in range(job.max_concurrent_requests)], return_exceptions=True)
 
 async def run(job: EmbedJob):
     """
     Main entry point for the embedding job.
     """
-    job_queue = asyncio.Queue(maxsize=job.max_workers)
+    job_queue = asyncio.Queue(maxsize=job.max_concurrent_requests)
     request_limiter = AsyncLimiter(config.max_requests_per_minute(job.backend), 60)
     with Live(auto_refresh=True) as live:
         live.console.rule("Embedding Job: " + job.job_id)

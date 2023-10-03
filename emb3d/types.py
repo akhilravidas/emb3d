@@ -14,6 +14,9 @@ class Backend(Enum):
     COHERE = "Cohere"
     HUGGINGFACE = "Hugging Face"
 
+class InputType(Enum):
+    JSONL = "jsonl"
+    CSV = "csv"
 
 @dataclass
 class Result:
@@ -67,7 +70,7 @@ class EmbedJob:
     model_id: str
     api_key: str
     total_records: int
-    max_workers: int
+    max_concurrent_requests: int
     column_name: str = "text"
 
 
@@ -121,3 +124,4 @@ class Batch:
     inputs: List[str]
     embeddings: Optional[List[List[float]]] = None
     error: Optional[str] = None
+

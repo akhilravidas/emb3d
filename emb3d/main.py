@@ -22,8 +22,15 @@ default_env_variables = {
     Backend.HUGGINGFACE: "HUGGINGFACE_API_KEY"
 }
 
-@app.command()
-def main(input_file: Optional[Path] = None, model_id: Optional[str] = None, output_file: Optional[Path] = None, api_key: Optional[str] = None, max_workers: int=1000,  yes: bool = typer.Option(False, "-y", "--yes", help="Confirm all prompts automatically")):
+@app.command(help="Generate embeddings for your input.")
+def main(
+    input_file: Optional[Path] = typer.Argument(None, help="Path to the input file. If not provided, it will be prompted."),
+    model_id: Optional[str] = typer.Option(None, help="ID of the embedding model. Default is 'text-embedding-ada-002'."),
+    output_file: Optional[Path] = typer.Option(None, "--output_file", "-o", help="Path to the output file. If not provided, a default path will be suggested."),
+    api_key: Optional[str] = typer.Option(None, help="API key for the backend. If not provided, it will be prompted or fetched from environment variables."),
+    max_concurrent_requests: int = typer.Option(1000, help="Maximum number of concurrent requests for the embedding task. Default is 1000."),
+    yes: bool = typer.Option(False, "-y", "--yes", help="Confirm all prompts automatically.")
+):
     if input_file is None:
         input_file = Path(Prompt.ask("Enter the input file path"))
         if not input_file.exists():
@@ -67,10 +74,6 @@ def main(input_file: Optional[Path] = None, model_id: Optional[str] = None, outp
         out_file=output_file,
         api_key=api_key,
         total_records=num_records,
-        max_workers=min(max_workers, num_records)
+        max_concurrent_requests=min(max_concurrent_requests, num_records)
     )
     asyncio.run(run(job))
-
-
-if __name__ == "__main__":
-    app()
