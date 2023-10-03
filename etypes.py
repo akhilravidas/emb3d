@@ -5,7 +5,7 @@ from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import List
+from typing import List, Optional, Union
 
 
 class Backend(Enum):
@@ -34,10 +34,10 @@ class WaitFor:
     Some services like hugging face provide a wait time before retrying.
     """
     seconds: float
-    error: str | None
+    error: Optional[str]
 
 
-EmbedResponse = Result | Failure | WaitFor
+EmbedResponse = Union[Result, Failure, WaitFor]
 
 OpenAIModels = ("text-embedding-ada-002", )
 CohereModels = ("embed-english-v2.0", "embed-english-light-v2.0", "embed-multilingual-v2.0")
@@ -119,5 +119,5 @@ class Batch:
     """
     row_ids: List[int]
     inputs: List[str]
-    embeddings: List[List[float]] | None = None
-    error: str | None = None
+    embeddings: Optional[List[List[float]]] = None
+    error: Optional[str] = None

@@ -105,16 +105,16 @@ async def gen(job: EmbedJob, inputs: List[str]) -> EmbedResponse:
 
     Routes to the appropriate client based on the job specification.
     """
-    match job.backend:
-        case Backend.HUGGINGFACE:
-            return await _huggingface(job, inputs)
-        case Backend.OPENAI:
-            openai.api_key = job.api_key
-            return await _openai(job, inputs)
-        case Backend.COHERE:
-            return await _cohere(job, inputs)
-        case _:
-            raise ValueError(f"Unknown backend: {job.backend}")
+    if job.backend == Backend.HUGGINGFACE:
+        return await _huggingface(job, inputs)
+    elif job.backend == Backend.OPENAI:
+        openai.api_key = job.api_key
+        return await _openai(job, inputs)
+    elif job.backend == Backend.COHERE:
+        return await _cohere(job, inputs)
+    else:
+        raise ValueError(f"Unknown backend: {job.backend}")
+
 
 @functools.cache
 def get_encoder(model_id: str) -> tiktoken.Encoding:

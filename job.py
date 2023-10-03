@@ -96,21 +96,34 @@ async def worker(job: EmbedJob, rate_limiter: AsyncLimiter, job_queue: asyncio.Q
             job.tracker.encoding += len(batch.inputs)
             resp = await client.gen(job, batch.inputs)
             job.tracker.encoding -= len(batch.inputs)
-            match resp:
-                case Result(data):
-                    assert len(data) == len(batch.inputs)
-                    # clear off transient error
-                    batch.error = None
-                    batch.embeddings = data
-                    job.batch_success(len(batch.inputs))
-                    await write_batch_results(job, batch)
-                    break
-                case Failure(error):
-                    batch.error = error
-                case WaitFor(seconds, error):
-                    batch.error = error
-                    if batch_retry != 0:
-                        await asyncio.sleep(seconds)
+            # match resp:
+            #     case Result(data):
+            #         assert len(data) == len(batch.inputs)
+            #         # clear off transient error
+            #         batch.error = None
+            #         batch.embeddings = data
+            #         job.batch_success(len(batch.inputs))
+            #         await write_batch_results(job, batch)
+            #         break
+            #     case Failure(error):
+            #         batch.error = error
+            #     case WaitFor(seconds, error):
+            #         batch.error = error
+            #         if batch_retry != 0:
+            #             await asyncio.sleep(seconds)
+            if isinstance(resp, Result):
+                assert len(resp.data) == len(batch.inputs)
+                # clear off transient error
+                batch.error = None
+                batch.embeddings = resp.data
+                job.batch_success(len(batch.inputs))
+                await write_batch_results(job, batch)
+            elif isinstance(resp, Failure):
+                batch.error = resp.error
+            elif isinstance(resp, WaitFor):
+                batch.error = resp.error
+                if batch_retry != 0:
+                    await asyncio.sleep(resp.seconds)
 
             if batch_retry == 0:
                 job.batch_failure(len(batch.inputs))

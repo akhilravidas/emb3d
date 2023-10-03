@@ -25,7 +25,7 @@ default_env_variables = {
 @app.command()
 def main(input_file: Optional[Path] = None, model_id: Optional[str] = None, output_file: Optional[Path] = None, api_key: Optional[str] = None, max_workers: int=1000,  yes: bool = typer.Option(False, "-y", "--yes", help="Confirm all prompts automatically")):
     if input_file is None:
-        input_file = Path(Prompt.ask("Enter the input file path", default="input-1000.jsonl"))
+        input_file = Path(Prompt.ask("Enter the input file path"))
         if not input_file.exists():
             raise typer.BadParameter(f"File {input_file} does not exist, aborting...")
         if not input_file.is_file():
