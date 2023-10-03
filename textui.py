@@ -1,67 +1,85 @@
-# import asyncio
-
-# from rich.table import Table, box
-# from rich.panel import Panel
-# from rich.progress import Progress
-# from rich.live import Live
-
-# async def update_ui(tracker: JobTracker, live: Live):
-#     overall_progress = Progress(expand=True)
-#     overall_task = overall_progress.add_task("Progress", total=tracker.total)
-#     while True:
-#         live.update(render_loop(tracker, overall_progress, overall_task))
-#         await asyncio.sleep(0.2)
-
-# def render_loop(tracker: JobTracker, progress: Progress, task_id: int):
-#     table = Table(expand=True, title_justify="left", show_header=False, box=box.SIMPLE)
-#     table.title = f"Job ID: {tracker.job_id}"
-#     # There has to be a better way for ETA
-#     progress.advance(task_id, tracker.saved - progress.tasks[task_id].completed)
-#     table.add_row(progress)
-#     return table
-
+"""
+Rich UI widgets for job progress reporting
+"""
 import asyncio
+
 from rich.live import Live
+from rich.panel import Panel
+from rich.progress import BarColumn, Progress, ProgressColumn, TextColumn
+from rich.rule import Rule
 from rich.table import Table, box
-from rich.progress import Progress
-from collections import deque
-from dataclasses import dataclass, field
-from etypes import JobTracker
+from rich.text import Text
 
-async def update_ui(tracker: JobTracker, live: Live):
-    overall_progress = Progress(expand=True)
-    overall_task = overall_progress.add_task("Progress", total=tracker.total)
+from etypes import EmbedJob, JobTracker
 
-    while True:
-        # Create tables for errors and progress
-        error_table = Table(title="Errors", show_header=False, box=box.SIMPLE)
-        progress_table = Table(title="Progress", show_header=False, box=box.SIMPLE)
 
-        # Populate error table
-        for error in tracker.recent_errors:
-            error_table.add_row(str(error))
+class TaskProgressColumn(ProgressColumn):
+    def __init__(self):
+        super().__init__()
 
-        # Populate progress table
-        progress_table.add_row(f"Success: {tracker.success}")
-        progress_table.add_row(f"Failed: {tracker.failed}")
-        progress_table.add_row(f"Saved: {tracker.saved}")
-        progress_table.add_row(f"Total: {tracker.total}")
+    def render(self, task) -> Text:
+        max_width = len(str(task.total))
+        completed_str = str(task.completed).rjust(max_width)
+        total_str = str(task.total).rjust(max_width)
+        return Text(f"{completed_str} / {total_str}")
 
-        # Update live display
-        live.update(render_loop(tracker, overall_progress, overall_task, error_table, progress_table))
 
-        await asyncio.sleep(0.2)
 
-def render_loop(tracker: JobTracker, progress: Progress, task_id: int, error_table: Table, progress_table: Table):
-    table = Table(expand=True, title_justify="left", show_header=False, box=box.SIMPLE)
-    table.title = f"Job ID: {tracker.job_id}"
 
-    # Update progress
-    progress.advance(task_id, tracker.saved - progress.tasks[task_id].completed)
 
-    # # Add sub-tables to the main table
-    table.add_row(progress_table)
-    table.add_row(error_table)
-    table.add_row(progress)
+class ProgressBar(Progress):
+    def get_renderables(self):
+        overall_tasks = [task for task in self.tasks if task.fields.get("progress_type") == "overall"]
+        run_tasks = [task for task in self.tasks if task.fields.get("progress_type") != "overall"]
+        # Show overall progress at the end
+        self.columns = (
+            "{task.description}",
+            BarColumn(),
+            TaskProgressColumn(),
+            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+        )
+        yield self.make_tasks_table(run_tasks)
+        self.columns = self.get_default_columns()
+        yield Rule()
+        yield self.make_tasks_table(overall_tasks)
+
+    def update_values(self, tracker: JobTracker):
+        for task in self.tasks:
+            if task.fields.get("task_handle") == "processing":
+                task.completed = tracker.encoding
+            if task.fields.get("task_handle") == "failed":
+                task.completed = tracker.failed
+            if task.fields.get("task_handle") == "success":
+                task.completed = tracker.saved
+            if task.fields.get("task_handle") == "overall":
+                # do the difference to get ETA
+                self.advance(task.id, tracker.saved - task.completed)
+        self.refresh()
+
+
+async def render_ui(job: EmbedJob, live: Live):
+    tracker = job.tracker
+    progress = ProgressBar()
+    progress.add_task("[magenta]Processing", total=tracker.total, progress_type="other", task_handle="processing")
+    progress.add_task("[red]Failed", total=tracker.total, progress_type="other", task_handle="failed")
+    progress.add_task("[green]Saved", total=tracker.total, progress_type="other", task_handle="success")
+    progress.add_task("Overall", total=tracker.total, progress_type="overall", task_handle="overall")
+    # TODO: Handle clean termination and keyboard interrupt
+    while tracker.saved < tracker.total:
+        live.update(render_loop(tracker, progress))
+
+        await asyncio.sleep(0.8)
+    live.update(render_loop(tracker, progress))
+
+def render_loop(tracker: JobTracker, progress: ProgressBar):
+    table = Table.grid(expand=True)
+    error_table = Table(show_header=False, box=box.SIMPLE, expand=True)
+    for error in tracker.recent_errors:
+        error_table.add_row("- " + str(error))
+
+    progress.update_values(tracker)
+    if tracker.recent_errors:
+        table.add_row(Panel(error_table, title="[b] Recent Errors", title_align="left", border_style="red", padding=(1, 2), expand=True))
+    table.add_row(Panel.fit(progress, title="[b]Jobs", title_align="left", border_style="green", padding=(1, 2)))
 
     return table

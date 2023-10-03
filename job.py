@@ -1,15 +1,17 @@
+"""
+Job Execution
+"""
 import asyncio
 import json
-from typing import Iterable, Iterator, Set
+from typing import Iterable, Iterator
 
 from aiolimiter import AsyncLimiter
 from rich.live import Live
 
-import textui
-
 import client
 import config
 import reader
+import textui
 from etypes import Batch, EmbedJob, Failure, Result, WaitFor
 
 
@@ -46,53 +48,8 @@ def gen_batch(job: EmbedJob, batch_size: int, max_tokens: int) -> Iterator[Batch
         yield Batch(batch_ids, batch_inputs)
 
 
-# TODO: Implement insta fails [empty string]
-async def generate(run: EmbedJob, rate_limiter: AsyncLimiter, batch: Batch, queue: asyncio.Queue, num_retries=2):
-    assert len(batch.inputs) == len(batch.row_ids)
-    while num_retries > 0:
-        await rate_limiter.acquire()
-        resp = await client.gen(run, batch.inputs)
-        num_retries -= 1
-        match resp:
-            case Result(data):
-                assert len(data) == len(batch.inputs)
-                batch.embeddings = data
-                run.batch_success(len(batch.inputs))
-                queue.put_nowait(batch)
-                break
-            case Failure(error):
-                batch.error = error
-            case WaitFor(seconds, error):
-                batch.error = error
-                if num_retries != 0:
-                    await asyncio.sleep(seconds)
-
-        if num_retries == 0:
-            run.batch_failure(len(batch.inputs))
-            queue.put_nowait(batch)
-
-
-async def flush(run: EmbedJob, queue: asyncio.Queue):
-    """
-    Writer task that flushes computed results to disk.
-    """
-    with open(run.out_file, "a") as fp:
-        while True:
-            result = await queue.get()
-            if result.error is not None:
-                run.batch_error(str(result.error))
-            for idx, _ in enumerate(result.row_ids):
-                fp.write(json.dumps({
-                    "row_id": result.row_ids[idx],
-                    "input": result.inputs[idx],
-                    "embedding": result.embeddings[idx] if result.embeddings else None,
-                    "error": str(result.error) if result.error else None,
-                }) + "\n")
-                run.batch_saved(1)
-            queue.task_done()
-
-
-async def cancel(tasks: Iterable[asyncio.Task]):
+async def terminate(*tasks: Iterable[asyncio.Task]):
+    """ Cancels tasks and waits for them to complete. """
     for task in tasks:
         task.cancel()
     for task in tasks:
@@ -101,24 +58,91 @@ async def cancel(tasks: Iterable[asyncio.Task]):
         except asyncio.CancelledError:
             pass
 
-async def run(run: EmbedJob):
-    results_q = asyncio.Queue()
-    writer_handle = asyncio.create_task(flush(run, results_q))
-    request_limiter = AsyncLimiter(config.max_requests_per_minute(run.backend), 60)
-    in_progress_tasks: Set[asyncio.Task] = set()
-    with Live(refresh_per_second=10) as live:
-        ui_task = asyncio.create_task(textui.update_ui(run.tracker, live))
+async def produce(job: EmbedJob, queue: asyncio.Queue):
+    """
+    Producer task that generates batches and pushes them to the queue.
+    """
+    for batch in gen_batch(job, config.batch_size(job.backend), config.max_tokens(job.backend)):
+        await queue.put(batch)
+
+
+FILE_WRITE_LOCK = asyncio.Lock()
+
+async def write_batch_results(job: EmbedJob, batch: Batch):
+    """ Write batch results to output file. """
+    async with FILE_WRITE_LOCK:
+        with open(job.out_file, "a") as fp:
+            for idx, _ in enumerate(batch.row_ids):
+                fp.write(json.dumps({
+                    "row_id": batch.row_ids[idx],
+                    "input": batch.inputs[idx],
+                    "embedding": batch.embeddings[idx] if batch.embeddings else None,
+                    "error": str(batch.error) if batch.error else None,
+                }) + "\n")
+    job.batch_saved(len(batch.row_ids))
+
+
+async def worker(job: EmbedJob, rate_limiter: AsyncLimiter, job_queue: asyncio.Queue, num_retries=2):
+    """
+    Consumer task that consumes batches from the queue and generates embeddings.
+    """
+    while True:
+        batch = await job_queue.get()
+        assert len(batch.inputs) == len(batch.row_ids)
+        batch_retry = num_retries
+        while batch_retry > 0:
+            batch_retry -= 1
+            await rate_limiter.acquire()
+            job.tracker.encoding += len(batch.inputs)
+            resp = await client.gen(job, batch.inputs)
+            job.tracker.encoding -= len(batch.inputs)
+            match resp:
+                case Result(data):
+                    assert len(data) == len(batch.inputs)
+                    # clear off transient error
+                    batch.error = None
+                    batch.embeddings = data
+                    job.batch_success(len(batch.inputs))
+                    await write_batch_results(job, batch)
+                    break
+                case Failure(error):
+                    batch.error = error
+                case WaitFor(seconds, error):
+                    batch.error = error
+                    if batch_retry != 0:
+                        await asyncio.sleep(seconds)
+
+            if batch_retry == 0:
+                job.batch_failure(len(batch.inputs))
+                if batch.error is not None:
+                    job.batch_error(str(batch.error))
+                await write_batch_results(job, batch)
+        job_queue.task_done()
+
+async def consume(job: EmbedJob, rate_limiter: AsyncLimiter, job_queue: asyncio.Queue, num_retries=2):
+    """
+    Consumer task that consumes batches from the queue and generates embeddings.
+    """
+    return await asyncio.gather(*[worker(job, rate_limiter, job_queue, num_retries) for _ in range(job.max_workers)], return_exceptions=True)
+
+async def run(job: EmbedJob):
+    """
+    Main entry point for the embedding job.
+    """
+    job_queue = asyncio.Queue(maxsize=job.max_workers)
+    request_limiter = AsyncLimiter(config.max_requests_per_minute(job.backend), 60)
+    with Live(auto_refresh=True) as live:
+        live.console.rule("Embedding Job: " + job.job_id)
+        ui_task = asyncio.create_task(textui.render_ui(job, live))
+        producer_task = asyncio.create_task(produce(job, job_queue))
+        consumer_task = asyncio.create_task(consume(job, request_limiter, job_queue=job_queue))
         try:
-            for batch in gen_batch(run, config.batch_size(run.backend), config.max_tokens(run.backend)):
-                task = asyncio.create_task(generate(run, request_limiter, batch, results_q))
-                in_progress_tasks.add(task)
-                task.add_done_callback(in_progress_tasks.remove)
+            await asyncio.wait({producer_task}, return_when=asyncio.FIRST_EXCEPTION)
+            await job_queue.join()
+            await terminate(consumer_task)
         except KeyboardInterrupt:
-            print(f"Keyboard interrupt, saving {results_q.qsize()} items before terminating.")
-            await cancel(in_progress_tasks)
+            print(f"Keyboard interrupt, saving {job_queue.qsize()} items before terminating.")
+            await terminate(producer_task, consumer_task)
         finally:
-            for task in list(in_progress_tasks):
-                await task
-            await results_q.join()
-            await cancel([writer_handle, ui_task])
             await client.cleanup()
+            await ui_task

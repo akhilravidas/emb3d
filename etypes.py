@@ -1,11 +1,11 @@
 """
 Type declarations
 """
+from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import List
-from collections import deque
 
 
 class Backend(Enum):
@@ -49,6 +49,7 @@ class JobTracker:
     """
     job_id: str
     success: int = 0
+    encoding: int = 0
     failed: int = 0
     saved: int = 0
     total: int = 0
@@ -66,7 +67,9 @@ class EmbedJob:
     model_id: str
     api_key: str
     total_records: int
+    max_workers: int
     column_name: str = "text"
+
 
     tracker: JobTracker = field(init=False)
 
