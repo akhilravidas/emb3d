@@ -29,6 +29,7 @@ class TaskProgressColumn(ProgressColumn):
 
 class ProgressBar(Progress):
     def get_renderables(self):
+        yield Rule("Records")
         overall_tasks = [task for task in self.tasks if task.fields.get("progress_type") == "overall"]
         run_tasks = [task for task in self.tasks if task.fields.get("progress_type") != "overall"]
         # Show overall progress at the end
@@ -40,7 +41,8 @@ class ProgressBar(Progress):
         )
         yield self.make_tasks_table(run_tasks)
         self.columns = self.get_default_columns()
-        yield Rule()
+        yield Text("\n")
+        yield Rule("Overall")
         yield self.make_tasks_table(overall_tasks)
 
     def update_values(self, tracker: JobTracker):
@@ -60,10 +62,10 @@ class ProgressBar(Progress):
 async def render_ui(job: EmbedJob, live: Live):
     tracker = job.tracker
     progress = ProgressBar()
-    progress.add_task("[magenta]Processing", total=tracker.total, progress_type="other", task_handle="processing")
+    progress.add_task("[magenta]Running", total=tracker.total, progress_type="other", task_handle="processing")
     progress.add_task("[red]Failed", total=tracker.total, progress_type="other", task_handle="failed")
     progress.add_task("[green]Saved", total=tracker.total, progress_type="other", task_handle="success")
-    progress.add_task("Overall", total=tracker.total, progress_type="overall", task_handle="overall")
+    progress.add_task("Progress", total=tracker.total, progress_type="overall", task_handle="overall")
     # TODO: Handle clean termination and keyboard interrupt
     while tracker.saved < tracker.total:
         live.update(render_loop(tracker, progress))
