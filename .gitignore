@@ -1,3 +1,4 @@
 plan.txt
 *.jsonl
 __pycache__
+dist/
