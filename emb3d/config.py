@@ -3,7 +3,7 @@ Configuration parameters for clients
 """
 import functools
 
-from etypes import Backend
+from emb3d.types import Backend
 
 # Scale down factor
 SCALE_DOWN_FACTOR = 0.8

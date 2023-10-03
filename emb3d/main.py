@@ -10,9 +10,9 @@ from uuid import uuid4
 import typer
 from rich.prompt import Confirm, Prompt
 
-import reader
-from etypes import Backend, EmbedJob
-from job import run
+from emb3d import reader
+from emb3d.job import run
+from emb3d.types import Backend, EmbedJob
 
 app = typer.Typer()
 

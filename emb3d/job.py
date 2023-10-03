@@ -8,11 +8,8 @@ from typing import Iterable, Iterator
 from aiolimiter import AsyncLimiter
 from rich.live import Live
 
-import client
-import config
-import reader
-import textui
-from etypes import Batch, EmbedJob, Failure, Result, WaitFor
+from emb3d import client, config, reader, textui
+from emb3d.types import Batch, EmbedJob, Failure, Result, WaitFor
 
 
 def gen_batch(job: EmbedJob, batch_size: int, max_tokens: int) -> Iterator[Batch]:

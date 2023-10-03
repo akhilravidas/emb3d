@@ -4,7 +4,6 @@ Processors for different models
 import functools
 import json
 import logging
-import os
 from typing import List
 
 import cohere as co
@@ -12,8 +11,9 @@ import httpx
 import openai
 import tiktoken
 
-import config
-from etypes import Backend, EmbedJob, EmbedResponse, Failure, Result, WaitFor
+from emb3d import config
+from emb3d.types import (Backend, EmbedJob, EmbedResponse, Failure, Result,
+                          WaitFor)
 
 HF_HEADERS = {}
 OPENAI_INIT_PARAMS = {}
