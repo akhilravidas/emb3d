@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "emb3d"
-version = "0.1.0"
+version = "0.1.101"
 description = "emb3d.co command line inteface to work with embeddings."
 authors = ["Akhil Ravidas <ar@mod0.ai>"]
 readme = "README.md"
@@ -20,3 +20,7 @@ numpy = "*"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+emb3d = "emb3d:app"
+
