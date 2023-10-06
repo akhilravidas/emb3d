@@ -1,12 +1,62 @@
 # emb3d
 
-`emb3d` is a command-line utility that allows users to generate embeddings using models from OpenAI, Cohere and HuggingFace.
+`emb3d` is a command-line utility that lets you generate embeddings using models from OpenAI, Cohere and HuggingFace.
 
 ## Installation
 
 ```sh
 pip install --upgrade emb3d
 ```
+
+## Quick Start ⚡️
+
+### Install the library
+
+```sh
+pip install -U emb3d
+```
+
+### Prepare your input file
+
+emb3d expects a JSONL file as input. Each line of the file should be a JSON object with a `text` key. Example input file:
+
+```json
+{"text": "I love my dog"}
+{"text": "I love my cat"}
+{"text": "I love my rabbit"}
+```
+
+Your files can optionally have other fields like ids, categorical labels etc.. and they are saved as-is in the final output file.
+
+### Compute embeddings
+
+The default model is OpenAI's `text-embedding-ada-002`. You can change the model by passing the `--model-id` flag.
+
+```sh
+OPENAI_API_KEY=<your-openai-api-key> \
+emb3d compute inputs.jsonl
+```
+
+```sh
+COHERE_API_KEY=<your-cohere-api-key> \
+emb3d compute inputs.jsonl --model-id embed-english-v2.0 --output-file cohere-embeddings.jsonl
+```
+
+
+### Visualize your embeddings
+
+The last step is to visualize your embeddings. This will open a browser window with a visualization of your computed embeddings.
+```sh
+emb3d visualize
+```
+
+You can alternatively pass the path to the computed embeddings file:
+
+```sh
+emb3d visualize old-embeddings.jsonl
+```
+
+### Profit 💰
 
 ## Usage
 
@@ -49,9 +99,4 @@ pip install --upgrade emb3d
 ╭─ Commands ────────────────────────────────────────────────────────────────────────────────╮
 │ config           Get or set a configuration value.                                        │
 ╰───────────────────────────────────────────────────────────────────────────────────────────╯
-
-
 ```
-
-```bash
-emb3d [OPTIONS]
