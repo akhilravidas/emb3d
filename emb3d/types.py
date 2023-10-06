@@ -16,11 +16,6 @@ class Backend(Enum):
     LOCAL = "Local Execution"
 
 
-class InputType(Enum):
-    JSONL = "jsonl"
-    CSV = "csv"
-
-
 @dataclass
 class Result:
     """Embedding call result wrapper for a batch"""
