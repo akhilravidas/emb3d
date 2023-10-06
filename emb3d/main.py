@@ -137,7 +137,7 @@ def main(
         help="Path to the input file.",
     ),
     model_id: Optional[str] = typer.Option(
-        None, help="ID of the embedding model. Default is 'text-embedding-ada-002'."
+        None, help="ID of the embedding model. Default is `text-embedding-ada-002`."
     ),
     output_file: Optional[Path] = typer.Option(
         None,
