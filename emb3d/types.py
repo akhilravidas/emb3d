@@ -153,8 +153,7 @@ class EmbedJob:
             "total_records": str(self.total_records),
             "batch_size": str(self.batch_size),
             "max_concurrent_requests": str(self.max_concurrent_requests),
-            "execution_mode": self.execution_config.mode.value,
-            "column_name": self.column_name,
+            "mode": self.execution_config.mode.value,
         }
 
 
