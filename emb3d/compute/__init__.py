@@ -9,7 +9,7 @@ from rich.console import Console
 from rich.live import Live
 
 from emb3d import textui
-from emb3d.job import local, remote
+from emb3d.compute import local, remote
 from emb3d.types import EmbedJob
 
 

@@ -1,7 +1,7 @@
 import io
 import json
 
-from emb3d.job.common import gen_batch, write_batch_results_post_lock
+from emb3d.compute.common import gen_batch, write_batch_results_post_lock
 from emb3d.test_utils import mock_embed_job
 from emb3d.types import Batch
 

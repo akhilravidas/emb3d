@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from emb3d import reader
-from emb3d.job.local import run
+from emb3d.compute.local import run
 from emb3d.test_utils import mock_embed_job
 
 

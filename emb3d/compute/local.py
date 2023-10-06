@@ -1,7 +1,7 @@
 import sentence_transformers
 
 from emb3d import config
-from emb3d.job.common import gen_batch, write_batch_results_post_lock
+from emb3d.compute.common import gen_batch, write_batch_results_post_lock
 from emb3d.types import EmbedJob
 
 

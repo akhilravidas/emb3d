@@ -5,7 +5,7 @@ from typing import Coroutine
 from aiolimiter import AsyncLimiter
 
 from emb3d import client, config, textui
-from emb3d.job.common import gen_batch, write_batch_results_post_lock
+from emb3d.compute.common import gen_batch, write_batch_results_post_lock
 from emb3d.types import Batch, EmbedJob, Failure, Result, WaitFor
 
 

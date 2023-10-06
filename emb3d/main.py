@@ -13,7 +13,8 @@ import typer
 from rich.prompt import Prompt
 from typing_extensions import Annotated
 
-from emb3d import job, reader
+from emb3d import compute as compute_module
+from emb3d import reader
 from emb3d.config import AppConfig
 from emb3d.types import Backend, EmbedJob, ExecutionConfig
 
@@ -192,4 +193,11 @@ def compute(
             execution_config=execution_mode,
         )
 
-        job.execute(new_job)
+        compute_module.execute(new_job)
+
+
+@app.command(help="Visualize generated embeddings.")
+def visualize(embedding_file: Optional[Path] = typer.Argument(...)):
+    # Read the JSON
+    # Run UMAP
+    pass
