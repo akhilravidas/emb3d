@@ -2,11 +2,12 @@
 emb3d CLI
 """
 import os
+import random
+import string
 import sys
 from io import StringIO
 from pathlib import Path
 from typing import Optional, TextIO
-from uuid import uuid4
 
 import typer
 from rich.prompt import Prompt
@@ -127,6 +128,12 @@ def config(
         typer.echo(f"Saved new value for {key} to emb3d config.")
 
 
+def new_job_id(length: int = 5) -> str:
+    """Generate a random string of the given length."""
+    characters = string.hexdigits
+    return "".join(random.choice(characters) for _ in range(length)).lower()
+
+
 @app.command(help="Compute embeddings for fun and profit.")
 def compute(
     input_file: Optional[Path] = typer.Argument(
@@ -175,7 +182,7 @@ def compute(
         # Rewind
         input_file_io.seek(0)
         new_job = EmbedJob(
-            job_id=str(uuid4()),
+            job_id=new_job_id(),
             in_file=input_file_io,
             model_id=model,
             out_file=output_file_io,

@@ -15,9 +15,9 @@ from emb3d.types import EmbedJob
 
 def execute(job: EmbedJob):
     console = Console()
-    console.rule("Embedding Job Run")
+    console.rule("Starting Job")
     with Live(auto_refresh=True, console=console) as live:
-        print("Job Parameters:")
+        print("Job Config:")
         print(job.describe())
         if job.execution_config.is_remote:
             asyncio.run(remote.run(job, textui.render_ui_async(job, live)))
