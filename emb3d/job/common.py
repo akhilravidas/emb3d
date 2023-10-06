@@ -18,7 +18,9 @@ def write_batch_results_post_lock(job: EmbedJob, batch: Batch):
                 {
                     "row_id": batch.row_ids[idx],
                     "input": batch.inputs[idx],
-                    "embedding": batch.embeddings[idx] if batch.embeddings else None,
+                    "embedding": batch.embeddings[idx]
+                    if batch.embeddings is not None
+                    else None,
                     "error": str(batch.error) if batch.error else None,
                 }
             )
