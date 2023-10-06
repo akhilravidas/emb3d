@@ -1,6 +1,8 @@
 """
 Type declarations
 """
+from __future__ import annotations
+
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
@@ -67,18 +69,25 @@ class JobTracker:
 
 
 @dataclass
-class RemoteExecution:
-    backend: Backend
+class ExecutionConfig:
+    class ExecutionMode(Enum):
+        REMOTE = "remote"
+        LOCAL = "local"
+
+    mode: ExecutionMode
     api_key: str
 
+    @classmethod
+    def local(cls) -> ExecutionConfig:
+        return cls(cls.ExecutionMode.LOCAL, "")
 
-@dataclass
-class LocalExecution:
-    backend = Backend.LOCAL
-    api_key = ""
+    @classmethod
+    def remote(cls, api_key: str) -> ExecutionConfig:
+        return cls(cls.ExecutionMode.REMOTE, api_key)
 
-
-ExecutionMode = Union[RemoteExecution, LocalExecution]
+    @property
+    def is_remote(self) -> bool:
+        return self.mode == self.ExecutionMode.REMOTE
 
 
 @dataclass
@@ -93,7 +102,7 @@ class EmbedJob:
     model_id: str
     total_records: int
     max_concurrent_requests: int
-    execution_mode: ExecutionMode
+    execution_config: ExecutionConfig
     column_name: str = "text"
     tracker: JobTracker = field(init=False)
 
@@ -124,7 +133,7 @@ class EmbedJob:
     @property
     def api_key(self) -> str:
         """API key"""
-        return self.execution_mode.api_key
+        return self.execution_config.api_key
 
     @classmethod
     def backend_from_model(cls, model_id: str) -> Backend:

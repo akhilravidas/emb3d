@@ -1,8 +1,6 @@
 """
 emb3d CLI
 """
-import asyncio
-import logging
 import os
 import sys
 from io import StringIO
@@ -15,13 +13,7 @@ from rich.prompt import Prompt
 
 from emb3d import job, reader
 from emb3d.config import AppConfig
-from emb3d.types import (
-    Backend,
-    EmbedJob,
-    ExecutionMode,
-    LocalExecution,
-    RemoteExecution,
-)
+from emb3d.types import Backend, EmbedJob, ExecutionConfig
 
 app = typer.Typer(add_completion=False)
 
@@ -76,16 +68,16 @@ def _pick_model(model_id: Optional[str]) -> str:
     )
 
 
-def _execution_mode(
+def _execution_config(
     api_key: Optional[str], model_id: str, remote: bool
-) -> ExecutionMode:
+) -> ExecutionConfig:
     backend = EmbedJob.backend_from_model(model_id)
     remote_only_backends = (Backend.OPENAI, Backend.COHERE)
     if backend in remote_only_backends:
         remote = True
 
     if not remote:
-        return LocalExecution()
+        return ExecutionConfig.local()
 
     default_env_variables = {
         Backend.OPENAI: "OPENAI_API_KEY",
@@ -110,7 +102,7 @@ def _execution_mode(
             f"API key for {backend.value} backend is required, re-run the command with --api_key [your_key] or set {default_env_variables[backend]} environment variable."
         )
 
-    return RemoteExecution(backend=backend, api_key=api_key)
+    return ExecutionConfig.remote(api_key=api_key)
 
 
 @app.command(help="Get or set a configuration value.")
@@ -171,7 +163,7 @@ def main(
     input_file_io = _input_file_or_stdin(input_file, stdin_input)
     output_file_io = _output_file(output_file, input_file, stdin_input)
     model_id = _pick_model(model_id)
-    execution_mode = _execution_mode(api_key, model_id, remote)
+    execution_mode = _execution_config(api_key, model_id, remote)
 
     with input_file_io, output_file_io:
         num_records = sum(1 for _ in reader.line(input_file_io))
@@ -184,7 +176,7 @@ def main(
             out_file=output_file_io,
             total_records=num_records,
             max_concurrent_requests=min(max_concurrent_requests, num_records),
-            execution_mode=execution_mode,
+            execution_config=execution_mode,
         )
 
         job.execute(new_job)
