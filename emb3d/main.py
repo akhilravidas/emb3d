@@ -13,9 +13,8 @@ from uuid import uuid4
 import typer
 from rich.prompt import Prompt
 
-from emb3d import reader
+from emb3d import job, reader
 from emb3d.config import AppConfig
-from emb3d.job import run
 from emb3d.types import (
     Backend,
     EmbedJob,
@@ -114,6 +113,28 @@ def _execution_mode(
     return RemoteExecution(backend=backend, api_key=api_key)
 
 
+@app.command(help="Get or set a configuration value.")
+def config(
+    key: str = typer.Argument(
+        ...,
+        help="The configuration key to set or get. ex: `default_model`, `openai_token` etc..",
+    ),
+    value: Optional[str] = typer.Argument(
+        ...,
+        help="The value associated with the key. If not provided, the current value will be printed.",
+    ),
+):
+    config = AppConfig.instance()
+    if value is None:
+        current_value = config.get(key)
+        if current_value is not None:
+            typer.echo(f"{key} = {current_value}")
+        else:
+            typer.echo(f"{key} is not set.")
+    else:
+        config.set(key, value)
+
+
 @app.callback(
     invoke_without_command=True, help="Generate embeddings for fun and profit."
 )
@@ -156,7 +177,7 @@ def main(
         num_records = sum(1 for _ in reader.line(input_file_io))
         # Rewind
         input_file_io.seek(0)
-        job = EmbedJob(
+        new_job = EmbedJob(
             job_id=str(uuid4()),
             in_file=input_file_io,
             model_id=model_id,
@@ -165,26 +186,5 @@ def main(
             max_concurrent_requests=min(max_concurrent_requests, num_records),
             execution_mode=execution_mode,
         )
-        asyncio.run(run(job))
 
-
-@app.command(help="Get or set a configuration value.")
-def config(
-    key: str = typer.Argument(
-        ...,
-        help="The configuration key to set or get. ex: `default_model`, `openai_token` etc..",
-    ),
-    value: Optional[str] = typer.Argument(
-        ...,
-        help="The value associated with the key. If not provided, the current value will be printed.",
-    ),
-):
-    config = AppConfig.instance()
-    if value is None:
-        current_value = config.get(key)
-        if current_value is not None:
-            typer.echo(f"{key} = {current_value}")
-        else:
-            typer.echo(f"{key} is not set.")
-    else:
-        config.set(key, value)
+        job.execute(new_job)
