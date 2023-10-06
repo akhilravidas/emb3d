@@ -10,22 +10,6 @@ from emb3d.job.local import run
 from emb3d.test_utils import mock_embed_job
 
 
-# Mock for gen_batch, returns two mock batches
-def mock_gen_batch(*args, **kwargs):
-    mock_batch1 = Mock()
-    mock_batch1.inputs = ["Hello world!"]
-
-    mock_batch2 = Mock()
-    mock_batch2.inputs = ["Testing 123"]
-
-    return [mock_batch1, mock_batch2]
-
-
-# Mock for config.max_tokens, returns a mock value
-def mock_max_tokens(*args, **kwargs):
-    return 1000
-
-
 @pytest.mark.parametrize(
     "inputs, expected_embeddings",
     [
