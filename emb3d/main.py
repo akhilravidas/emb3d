@@ -30,10 +30,8 @@ def _input_file_or_stdin(input_file: Optional[Path], stdin_input: bool) -> TextI
         input_file = Path(Prompt.ask("Enter the input file path"))
         if not input_file or not input_file.exists():
             raise typer.BadParameter(f"File {input_file} does not exist, aborting...")
-        if not input_file.is_file():
-            raise typer.BadParameter(
-                f"File {input_file} is not a valid file, aborting..."
-            )
+    if not input_file.is_file():
+        raise typer.BadParameter(f"File {input_file} not found, aborting...")
     return input_file.open()
 
 
