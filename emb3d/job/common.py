@@ -44,12 +44,10 @@ def gen_batch(job: EmbedJob, batch_size: int, max_tokens: int) -> Iterator[Batch
         text = record[job.column_name]
         new_tokens = client.approx_token_count(job, text)
 
-        can_merge_token = (
-            batch_token_count + new_tokens < max_tokens or len(batch_ids) == 0
-        )
+        can_merge_token = batch_token_count + new_tokens < max_tokens
         can_merge_element = len(batch_ids) + 1 < batch_size
 
-        can_merge = can_merge_token and can_merge_element
+        can_merge = len(batch_ids) == 0 or (can_merge_token and can_merge_element)
         if can_merge:
             batch_ids.append(line_num)
             batch_inputs.append(text)
