@@ -6,7 +6,7 @@ from __future__ import annotations
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import List, Optional, TextIO, Union
+from typing import Dict, List, Optional, TextIO, Union
 
 
 class Backend(Enum):
@@ -145,6 +145,17 @@ class EmbedJob:
             return Backend.COHERE
         else:
             return Backend.HUGGINGFACE
+
+    def describe(self) -> Dict[str, str]:
+        return {
+            "job_id": self.job_id,
+            "model_id": self.model_id,
+            "total_records": str(self.total_records),
+            "batch_size": str(self.batch_size),
+            "max_concurrent_requests": str(self.max_concurrent_requests),
+            "execution_mode": self.execution_config.mode.value,
+            "column_name": self.column_name,
+        }
 
 
 @dataclass
