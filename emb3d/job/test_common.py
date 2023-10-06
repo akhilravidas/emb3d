@@ -2,27 +2,12 @@ import io
 import json
 
 from emb3d.job.common import gen_batch, write_batch_results_post_lock
-from emb3d.types import Batch, EmbedJob, ExecutionConfig
-
-
-def _mock_job(**kwargs):
-    defaults = {
-        "job_id": "test",
-        "in_file": io.StringIO(),
-        "model_id": "model",
-        "out_file": io.StringIO(""),
-        "total_records": 10,
-        "batch_size": 10,
-        "max_concurrent_requests": 1,
-        "execution_config": ExecutionConfig.local(),
-    }
-
-    defaults.update(kwargs)
-    return EmbedJob(**defaults)
+from emb3d.test_utils import mock_embed_job
+from emb3d.types import Batch
 
 
 def test_write_batch_results_post_lock():
-    job = _mock_job()
+    job = mock_embed_job()
     batch = Batch(row_ids=[1], inputs=["hello"], embeddings=[[4, 2]], error=None)
 
     write_batch_results_post_lock(job, batch)
@@ -38,7 +23,7 @@ def test_write_batch_results_post_lock():
 
 def test_gen_batch():
     in_file = io.StringIO('{"text": "hello"}\n{"text": "world"}')
-    job = _mock_job(in_file=in_file)
+    job = mock_embed_job(in_file=in_file)
 
     batches = list(gen_batch(job, batch_size=1, max_tokens=5))
 
@@ -51,7 +36,7 @@ def test_gen_batch():
 
 def test_gen_batch_low_tokens():
     in_file = io.StringIO('{"text": "hello"}\n{"text": "world"}')
-    job = _mock_job(in_file=in_file)
+    job = mock_embed_job(in_file=in_file)
 
     batches = list(gen_batch(job, batch_size=1, max_tokens=1))
 
@@ -75,11 +60,10 @@ def test_gen_batch_low_tokens():
 
 def test_gen_batch_high_tokens():
     in_file = io.StringIO('{"text": "hello"}\n{"text": "world"}')
-    job = _mock_job(in_file=in_file)
+    job = mock_embed_job(in_file=in_file)
 
     batches = list(gen_batch(job, batch_size=1, max_tokens=100))
 
-    # Each batch should have atleast one element when if its above the token limit
     assert len(batches) == 2
     assert batches[0].row_ids == [0]
     assert batches[0].inputs == ["hello"]
@@ -89,7 +73,6 @@ def test_gen_batch_high_tokens():
     in_file.seek(0)
     batches = list(gen_batch(job, batch_size=10, max_tokens=10))
 
-    # Each batch should have atleast one element when if its above the token limit
     assert len(batches) == 1
     assert batches[0].row_ids == [0, 1]
     assert batches[0].inputs == ["hello", "world"]
