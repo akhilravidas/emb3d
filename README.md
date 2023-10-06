@@ -33,19 +33,26 @@ Your files can optionally have other fields like ids, categorical labels etc.. a
 The default model is OpenAI's `text-embedding-ada-002`. You can change the model by passing the `--model-id` flag.
 
 ```sh
-OPENAI_API_KEY=<your-openai-api-key> \
+emb3d compute inputs.jsonl
+```
+
+You will need to have OPENAI_API_KEY set in your environment. You can also pass it as a flag (`--api_key`) or set it in a config file.
+
+```sh:
+emb3d config set openai_token YOUR-OPENAI-API-KEY
 emb3d compute inputs.jsonl
 ```
 
 ```sh
-COHERE_API_KEY=<your-cohere-api-key> \
 emb3d compute inputs.jsonl --model-id embed-english-v2.0 --output-file cohere-embeddings.jsonl
 ```
 
+For COHERE models, you will need to have COHERE_API_KEY set in your environment. You can also pass it as a flag (`--api_key`) or set it in a config file with: `emb3d config set cohere_token YOUR-COHERE-API-KEY`.
 
-### Visualize your embeddings
 
-The last step is to visualize your embeddings. This will open a browser window with a visualization of your computed embeddings.
+### Visualize your embeddings 💥
+
+The last step is to visualize your embeddings. This will open a browser window with a visualization of your last computed embeddings.
 ```sh
 emb3d visualize
 ```
@@ -53,7 +60,7 @@ emb3d visualize
 You can alternatively pass the path to the computed embeddings file:
 
 ```sh
-emb3d visualize old-embeddings.jsonl
+emb3d visualize run-2020-embeddings.jsonl
 ```
 
 ### Profit 💰
