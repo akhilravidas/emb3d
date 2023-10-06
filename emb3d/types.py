@@ -101,6 +101,7 @@ class EmbedJob:
     out_file: TextIO
     model_id: str
     total_records: int
+    batch_size: int
     max_concurrent_requests: int
     execution_config: ExecutionConfig
     column_name: str = "text"

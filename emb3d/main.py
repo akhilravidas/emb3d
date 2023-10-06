@@ -128,27 +128,25 @@ def config(
         config.set(key, value)
 
 
-@app.callback(
-    invoke_without_command=True, help="Generate embeddings for fun and profit."
-)
-def main(
+@app.command(help="Compute embeddings for fun and profit.")
+def compute(
     input_file: Optional[Path] = typer.Argument(
         ... if sys.stdin.isatty() else None,
         help="Path to the input file.",
     ),
-    model_id: Optional[str] = typer.Option(
-        None, help="ID of the embedding model. Default is `text-embedding-ada-002`."
+    model: Optional[str] = typer.Option(
+        AppConfig.instance().default_model,
+        help="Embedding model to use.",
     ),
     output_file: Optional[Path] = typer.Option(
         None,
         "--output-file",
-        "-out",
         "-o",
         help="Path to the output file. If not provided, a default path will be suggested.",
     ),
     api_key: Optional[str] = typer.Option(
         None,
-        help="API key for the backend. If not provided, it will be prompted or fetched from environment variables.",
+        help="API key for the service hosting the model. If not provided, it will be prompted or fetched from environment variables.",
     ),
     remote: Annotated[
         bool,
@@ -157,6 +155,10 @@ def main(
             help="Choose whether to do inference locally or with an API token. This choice is available for sentence transformer and hugging face models. If a model cannot be run locally (ex: OpenAI models), this flag is ignored.",
         ),
     ] = True,
+    batch_size: int = typer.Option(
+        100,
+        help="Batch size to use for inputs. Default is 100.",
+    ),
     max_concurrent_requests: int = typer.Option(
         1000,
         help="(Remote Execution) Maximum number of concurrent requests for the embedding task. Default is 1000.",
@@ -166,8 +168,8 @@ def main(
 
     input_file_io = _input_file_or_stdin(input_file, stdin_input)
     output_file_io = _output_file(output_file, input_file, stdin_input)
-    model_id = _pick_model(model_id)
-    execution_mode = _execution_config(api_key, model_id, remote)
+    model = _pick_model(model)
+    execution_mode = _execution_config(api_key, model, remote)
 
     with input_file_io, output_file_io:
         num_records = sum(1 for _ in reader.line(input_file_io))
@@ -176,9 +178,10 @@ def main(
         new_job = EmbedJob(
             job_id=str(uuid4()),
             in_file=input_file_io,
-            model_id=model_id,
+            model_id=model,
             out_file=output_file_io,
             total_records=num_records,
+            batch_size=batch_size,
             max_concurrent_requests=min(max_concurrent_requests, num_records),
             execution_config=execution_mode,
         )

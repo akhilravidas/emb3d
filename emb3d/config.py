@@ -30,20 +30,11 @@ max_token_limits = {
     Backend.HUGGINGFACE: 512,
 }
 
-# TODO: Figure out what the max batch size is for each service
-# Code: https://github.com/openai/openai-python/blob/main/openai/embeddings_utils.py#L43
-MAX_BATCH_SIZE = 16
-
 
 @functools.cache
 def max_requests_per_minute(backend: Backend) -> int:
     base_rpm = max_requests_limits.get(backend, 100)
     return int(base_rpm * SCALE_DOWN_FACTOR)
-
-
-def batch_size(backend: Backend) -> int:
-    # TODO: backend aware batch size
-    return MAX_BATCH_SIZE
 
 
 def max_tokens(backend: Backend) -> int:

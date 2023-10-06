@@ -25,9 +25,7 @@ async def produce(job: EmbedJob, queue: asyncio.Queue):
     Producer task that generates batches and pushes them to the queue.
     """
     logging.debug("Producer: Starting")
-    for batch in gen_batch(
-        job, config.batch_size(job.backend), config.max_tokens(job.backend)
-    ):
+    for batch in gen_batch(job, job.batch_size, config.max_tokens(job.backend)):
         logging.debug("Producer: Next Batch [%d]", len(batch.row_ids))
         await queue.put(batch)
 
