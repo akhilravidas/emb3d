@@ -15,9 +15,7 @@ def execute(job: EmbedJob):
     with Live(auto_refresh=True) as live:
         live.console.rule("Embedding Job: " + job.job_id)
         if job.execution_config.is_remote:
-            asyncio.run(
-                remote.run(job, asyncio.create_task(textui.render_ui_async(job, live)))
-            )
+            asyncio.run(remote.run(job, textui.render_ui_async(job, live)))
         else:
             ui_thread = threading.Thread(target=textui.render_ui_sync, args=(job, live))
             ui_thread.start()

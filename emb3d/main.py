@@ -124,6 +124,7 @@ def config(
             typer.echo(f"{key} is not set.")
     else:
         config.set(key, value)
+        typer.echo(f"Saved new value for {key} to emb3d config.")
 
 
 @app.command(help="Compute embeddings for fun and profit.")

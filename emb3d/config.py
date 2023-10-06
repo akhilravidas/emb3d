@@ -71,6 +71,8 @@ class AppConfig:
                 return cls._config
 
     def save(self):
+        if not os.path.exists(app_data_root()):
+            os.makedirs(app_data_root())
         with config_path().open("w") as f:
             yaml.safe_dump(self.__dict__, f)
 

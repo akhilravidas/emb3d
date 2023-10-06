@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from typing import Coroutine
 
 from aiolimiter import AsyncLimiter
 
@@ -110,11 +111,12 @@ async def consume(
     )
 
 
-async def run(job: EmbedJob, ui_task):
+async def run(job: EmbedJob, update_ui_coroutine: Coroutine[None, None, None]):
     """
     Main entry point for the embedding job.
     """
     job_queue = asyncio.Queue(maxsize=job.max_concurrent_requests)
+    ui_task = asyncio.create_task(update_ui_coroutine)
     request_limiter = AsyncLimiter(config.max_requests_per_minute(job.backend), 60)
     producer_task = asyncio.create_task(produce(job, job_queue))
     consumer_task = asyncio.create_task(
