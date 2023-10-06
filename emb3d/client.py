@@ -12,8 +12,7 @@ import openai
 import tiktoken
 
 from emb3d import config
-from emb3d.types import (Backend, EmbedJob, EmbedResponse, Failure, Result,
-                          WaitFor)
+from emb3d.types import Backend, EmbedJob, EmbedResponse, Failure, Result, WaitFor
 
 HF_HEADERS = {}
 OPENAI_INIT_PARAMS = {}
@@ -23,33 +22,38 @@ OPENAI_ENDPOINT = "https://api.openai.com/v1/embeddings"
 
 _cleanup_callables = []
 
+
 @functools.cache
 def httpx_client() -> httpx.AsyncClient:
-    """ Cached httpx client """
+    """Cached httpx client"""
     cli = httpx.AsyncClient()
     _cleanup_callables.append(cli.aclose)
     return cli
 
+
 @functools.cache
 def cohere_client(api_key: str) -> co.AsyncClient:
-    """ Cached cohere client """
+    """Cached cohere client"""
     cli = co.AsyncClient(api_key=api_key)
     _cleanup_callables.append(cli.close)
     return cli
 
+
 def hf_headers(job: EmbedJob) -> dict:
-    """ Returns the headers for the HuggingFace API """
+    """Returns the headers for the HuggingFace API"""
     return {
         "Authorization": f"Bearer {job.api_key}",
     }
 
+
 async def cleanup():
-    """ Cleanup any resources used by the clients """
+    """Cleanup any resources used by the clients"""
     for cleanup_fn in _cleanup_callables:
         await cleanup_fn()
 
+
 def hf_inference_url(model_id: str):
-    """ Inference URL for the HuggingFace API """
+    """Inference URL for the HuggingFace API"""
     return (
         f"https://api-inference.huggingface.co/pipeline/feature-extraction/{model_id}"
     )
@@ -61,7 +65,7 @@ async def _huggingface(job: EmbedJob, inputs: List[str]) -> EmbedResponse:
         hf_inference_url(job.model_id), headers=hf_headers(job), json=data
     )
 
-    logging.info("Model: %s, Response: %s", job.model_id, response.status_code)
+    logging.debug("Model: %s, Response: %s", job.model_id, response.status_code)
 
     try:
         json_response = response.json()
@@ -74,7 +78,9 @@ async def _huggingface(job: EmbedJob, inputs: List[str]) -> EmbedResponse:
         if estimated_time:
             return WaitFor(estimated_time, None)
         else:
-            return Failure("[HuggingFace] Service unavailable and estimated time not provided")
+            return Failure(
+                "[HuggingFace] Service unavailable and estimated time not provided"
+            )
     return Failure(f"[HuggingFace] Unexpected response: {json_response}")
 
 
@@ -83,9 +89,10 @@ async def _openai(job: EmbedJob, inputs: List[str]) -> EmbedResponse:
         resp = await openai.Embedding.acreate(model=job.model_id, input=inputs)
         return Result([row.embedding for row in resp.data])
     except openai.error.RateLimitError as err:
+        logging.debug("[OpenAI] Rate limit error: %s", err)
         return WaitFor(config.RATE_LIMIT_WAIT_TIME_SECS, error=err)
     except openai.error.APIError as err:
-        print("[OpenAI] Error:", err)
+        logging.debug("[OpenAI] Error:", err)
         return Failure(f"[OpenAI] Error: {err}")
 
 
@@ -96,7 +103,6 @@ async def _cohere(job: EmbedJob, inputs: List[str]) -> EmbedResponse:
         return Result(co_resp.embeddings)
     except co.error.CohereError as err:
         return Failure(f"[Cohere] Error: {err}")
-
 
 
 async def gen(job: EmbedJob, inputs: List[str]) -> EmbedResponse:
@@ -118,8 +124,9 @@ async def gen(job: EmbedJob, inputs: List[str]) -> EmbedResponse:
 
 @functools.cache
 def get_encoder(model_id: str) -> tiktoken.Encoding:
-    """ Returns encoder used for the given model_id """
+    """Returns encoder used for the given model_id"""
     return tiktoken.encoding_for_model(model_id)
+
 
 def approx_token_count(job: EmbedJob, input: str) -> int:
     """

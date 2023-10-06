@@ -4,29 +4,34 @@ Type declarations
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
-from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Optional, TextIO, Union
 
 
 class Backend(Enum):
-    """ Supported model backends """
+    """Supported model backends"""
+
     OPENAI = "OpenAI"
     COHERE = "Cohere"
     HUGGINGFACE = "Hugging Face"
+    LOCAL = "Local Execution"
+
 
 class InputType(Enum):
     JSONL = "jsonl"
     CSV = "csv"
 
+
 @dataclass
 class Result:
-    """ Embedding call result wrapper for a batch """
+    """Embedding call result wrapper for a batch"""
+
     data: List[List[float]]
 
 
 @dataclass
 class Failure:
-    """ Embedding call failure wrapper """
+    """Embedding call failure wrapper"""
+
     error: str
 
 
@@ -36,20 +41,27 @@ class WaitFor:
     Embedding call rate limit response handler.
     Some services like hugging face provide a wait time before retrying.
     """
+
     seconds: float
     error: Optional[str]
 
 
 EmbedResponse = Union[Result, Failure, WaitFor]
 
-OpenAIModels = ("text-embedding-ada-002", )
-CohereModels = ("embed-english-v2.0", "embed-english-light-v2.0", "embed-multilingual-v2.0")
+OpenAIModels = ("text-embedding-ada-002",)
+CohereModels = (
+    "embed-english-v2.0",
+    "embed-english-light-v2.0",
+    "embed-multilingual-v2.0",
+)
+
 
 @dataclass
 class JobTracker:
     """
     Run stats for a single job
     """
+
     job_id: str
     success: int = 0
     encoding: int = 0
@@ -60,53 +72,68 @@ class JobTracker:
 
 
 @dataclass
+class RemoteExecution:
+    backend: Backend
+    api_key: str
+
+
+@dataclass
+class LocalExecution:
+    backend = Backend.LOCAL
+    api_key = ""
+
+
+ExecutionMode = Union[RemoteExecution, LocalExecution]
+
+
+@dataclass
 class EmbedJob:
     """
     Single embedding job
     """
+
     job_id: str
-    in_file: Path
-    out_file: Path
+    in_file: TextIO
+    out_file: TextIO
     model_id: str
-    api_key: str
     total_records: int
     max_concurrent_requests: int
+    execution_mode: ExecutionMode
     column_name: str = "text"
-
-
     tracker: JobTracker = field(init=False)
 
     def __post_init__(self):
-        self.tracker = JobTracker(
-            job_id=self.job_id,
-            total=self.total_records
-        )
+        self.tracker = JobTracker(job_id=self.job_id, total=self.total_records)
 
     def batch_success(self, cnt: int):
-        """ Success callback """
+        """Success callback"""
         self.tracker.success += cnt
 
     def batch_failure(self, cnt: int):
-        """ Failure callback """
+        """Failure callback"""
         self.tracker.failed += cnt
 
     def batch_saved(self, cnt: int):
-        """ Saved callback """
+        """Saved callback"""
         self.tracker.saved += cnt
 
     def batch_error(self, error_msg: str):
-        """ Error callback """
+        """Error callback"""
         self.tracker.recent_errors.append(error_msg)
-
 
     @property
     def backend(self) -> Backend:
-        """ Model Backend """
+        """Model Backend"""
         return self.backend_from_model(self.model_id)
+
+    @property
+    def api_key(self) -> str:
+        """API key"""
+        return self.execution_mode.api_key
 
     @classmethod
     def backend_from_model(cls, model_id: str) -> Backend:
-        """ model_id -> backend enum """
+        """model_id -> backend enum"""
         if model_id in OpenAIModels:
             return Backend.OPENAI
         elif model_id in CohereModels:
@@ -120,8 +147,8 @@ class Batch:
     """
     Input batch
     """
+
     row_ids: List[int]
     inputs: List[str]
     embeddings: Optional[List[List[float]]] = None
     error: Optional[str] = None
-
