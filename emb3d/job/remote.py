@@ -2,7 +2,6 @@ import asyncio
 import logging
 
 from aiolimiter import AsyncLimiter
-from rich.live import Live
 
 from emb3d import client, config, textui
 from emb3d.job.common import gen_batch, write_batch_results_post_lock
@@ -113,25 +112,22 @@ async def consume(
     )
 
 
-async def run(job: EmbedJob):
+async def run(job: EmbedJob, ui_task):
     """
     Main entry point for the embedding job.
     """
     job_queue = asyncio.Queue(maxsize=job.max_concurrent_requests)
     request_limiter = AsyncLimiter(config.max_requests_per_minute(job.backend), 60)
-    with Live(auto_refresh=True) as live:
-        live.console.rule("Embedding Job: " + job.job_id)
-        ui_task = asyncio.create_task(textui.render_ui(job, live))
-        producer_task = asyncio.create_task(produce(job, job_queue))
-        consumer_task = asyncio.create_task(
-            consume(job, request_limiter, job_queue=job_queue)
-        )
-        try:
-            await asyncio.wait({producer_task}, return_when=asyncio.FIRST_EXCEPTION)
-            await job_queue.join()
-            await terminate(consumer_task)
-        except KeyboardInterrupt:
-            await terminate(producer_task, consumer_task)
-        finally:
-            await client.cleanup()
-            await ui_task
+    producer_task = asyncio.create_task(produce(job, job_queue))
+    consumer_task = asyncio.create_task(
+        consume(job, request_limiter, job_queue=job_queue)
+    )
+    try:
+        await asyncio.wait({producer_task}, return_when=asyncio.FIRST_EXCEPTION)
+        await job_queue.join()
+        await terminate(consumer_task)
+    except KeyboardInterrupt:
+        await terminate(producer_task, consumer_task)
+    finally:
+        await client.cleanup()
+        await ui_task

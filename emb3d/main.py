@@ -10,6 +10,7 @@ from uuid import uuid4
 
 import typer
 from rich.prompt import Prompt
+from typing_extensions import Annotated
 
 from emb3d import job, reader
 from emb3d.config import AppConfig
@@ -140,7 +141,8 @@ def main(
     ),
     output_file: Optional[Path] = typer.Option(
         None,
-        "--output_file",
+        "--output-file",
+        "-out",
         "-o",
         help="Path to the output file. If not provided, a default path will be suggested.",
     ),
@@ -148,11 +150,13 @@ def main(
         None,
         help="API key for the backend. If not provided, it will be prompted or fetched from environment variables.",
     ),
-    remote: bool = typer.Option(
-        False,
-        "--remote",
-        help="Run the job remotely. Default is local execution unless the model is one of OpenAI / Cohere's models.",
-    ),
+    remote: Annotated[
+        bool,
+        typer.Option(
+            "--remote/--local",
+            help="Choose whether to do inference locally or with an API token. This choice is available for sentence transformer and hugging face models. If a model cannot be run locally (ex: OpenAI models), this flag is ignored.",
+        ),
+    ] = True,
     max_concurrent_requests: int = typer.Option(
         1000,
         help="(Remote Execution) Maximum number of concurrent requests for the embedding task. Default is 1000.",

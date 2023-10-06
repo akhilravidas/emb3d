@@ -2,6 +2,7 @@
 Rich UI widgets for job progress reporting
 """
 import asyncio
+import time
 
 from rich.live import Live
 from rich.panel import Panel
@@ -11,6 +12,8 @@ from rich.table import Table, box
 from rich.text import Text
 
 from emb3d.types import EmbedJob, JobTracker
+
+UI_UPDATE_INTERVAL = 0.8
 
 
 class TaskProgressColumn(ProgressColumn):
@@ -24,14 +27,15 @@ class TaskProgressColumn(ProgressColumn):
         return Text(f"{completed_str} / {total_str}")
 
 
-
-
-
 class ProgressBar(Progress):
     def get_renderables(self):
         yield Rule("Records")
-        overall_tasks = [task for task in self.tasks if task.fields.get("progress_type") == "overall"]
-        run_tasks = [task for task in self.tasks if task.fields.get("progress_type") != "overall"]
+        overall_tasks = [
+            task for task in self.tasks if task.fields.get("progress_type") == "overall"
+        ]
+        run_tasks = [
+            task for task in self.tasks if task.fields.get("progress_type") != "overall"
+        ]
         # Show overall progress at the end
         self.columns = (
             "{task.description}",
@@ -59,19 +63,46 @@ class ProgressBar(Progress):
         self.refresh()
 
 
-async def render_ui(job: EmbedJob, live: Live):
-    tracker = job.tracker
+def _recreate_progress(tracker: JobTracker):
     progress = ProgressBar()
-    progress.add_task("[magenta]Running", total=tracker.total, progress_type="other", task_handle="processing")
-    progress.add_task("[red]Failed", total=tracker.total, progress_type="other", task_handle="failed")
-    progress.add_task("[green]Saved", total=tracker.total, progress_type="other", task_handle="success")
-    progress.add_task("Progress", total=tracker.total, progress_type="overall", task_handle="overall")
-    # TODO: Handle clean termination and keyboard interrupt
-    while tracker.saved < tracker.total:
-        live.update(render_loop(tracker, progress))
+    progress.add_task(
+        "[magenta]Running",
+        total=tracker.total,
+        progress_type="other",
+        task_handle="processing",
+    )
+    progress.add_task(
+        "[red]Failed", total=tracker.total, progress_type="other", task_handle="failed"
+    )
+    progress.add_task(
+        "[green]Saved",
+        total=tracker.total,
+        progress_type="other",
+        task_handle="success",
+    )
+    progress.add_task(
+        "Progress", total=tracker.total, progress_type="overall", task_handle="overall"
+    )
+    return progress
 
-        await asyncio.sleep(0.8)
-    live.update(render_loop(tracker, progress))
+
+def render_ui_sync(job: EmbedJob, live: Live):
+    progress = _recreate_progress(job.tracker)
+    while job.tracker.saved < job.tracker.total:
+        live.update(render_loop(job.tracker, progress))
+        time.sleep(UI_UPDATE_INTERVAL)
+    live.update(render_loop(job.tracker, progress))
+
+
+async def render_ui_async(job: EmbedJob, live: Live):
+    # TODO: Handle clean termination and keyboard interrupt
+    progress = _recreate_progress(job.tracker)
+    while job.tracker.saved < job.tracker.total:
+        live.update(render_loop(job.tracker, progress))
+
+        await asyncio.sleep(UI_UPDATE_INTERVAL)
+    live.update(render_loop(job.tracker, progress))
+
 
 def render_loop(tracker: JobTracker, progress: ProgressBar):
     table = Table.grid(expand=True)
@@ -81,7 +112,24 @@ def render_loop(tracker: JobTracker, progress: ProgressBar):
 
     progress.update_values(tracker)
     if tracker.recent_errors:
-        table.add_row(Panel(error_table, title="[b] Recent Errors", title_align="left", border_style="red", padding=(1, 2), expand=True))
-    table.add_row(Panel.fit(progress, title="[b]Jobs", title_align="left", border_style="green", padding=(1, 2)))
+        table.add_row(
+            Panel(
+                error_table,
+                title="[b] Recent Errors",
+                title_align="left",
+                border_style="red",
+                padding=(1, 2),
+                expand=True,
+            )
+        )
+    table.add_row(
+        Panel.fit(
+            progress,
+            title="[b]Jobs",
+            title_align="left",
+            border_style="green",
+            padding=(1, 2),
+        )
+    )
 
     return table
