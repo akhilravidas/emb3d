@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "emb3d"
-version = "0.1.104"
+version = "0.1.105"
 description = "emb3d.co command line inteface to work with embeddings."
 authors = ["Akhil Ravidas <ar@mod0.ai>"]
 readme = "README.md"
