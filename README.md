@@ -109,3 +109,5 @@ emb3d visualize run-2020-embeddings.jsonl
 ```
 <img width="1050" alt="Xnapper-2023-10-06-15 30 13" src="https://github.com/akhilravidas/emb3d/assets/104069/41cd9b27-ff53-420f-bedf-a85c3d4c769d">
 
+<img width="1050" alt="Xnapper-2023-10-06-16 15 47" src="https://github.com/akhilravidas/emb3d/assets/104069/a1939269-906f-4bf5-b10e-7771ec7d7556">
+
