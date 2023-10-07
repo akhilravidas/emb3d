@@ -113,3 +113,11 @@ emb3d visualize run-2020-embeddings.jsonl
 ## Need help? 🙋
 
 Join our [Discord server](https://discord.gg/qncFtMxP) and lets talk!
+
+## Contributing
+
+If you encounter any issues or have suggestions for improvements, please feel free to open an issue or submit a pull request. You can also reach us at our [Discord server](https://discord.gg/qncFtMxP).
+
+## License
+
+emb3d CLI tool is released under the MIT License. See the [LICENSE](LICENSE) file for more details.
