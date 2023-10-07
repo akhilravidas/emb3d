@@ -2,18 +2,12 @@
 
 `emb3d` is a command-line utility that lets you generate embeddings using models from OpenAI, Cohere and HuggingFace.
 
-## Installation
-
-```sh
-pip install --upgrade emb3d
-```
-
 ## Quick Start ⚡️
 
 ### Install the library
 
 ```sh
-pip install -U emb3d
+pip install --upgrade emb3d
 ```
 
 ### Prepare your input file
