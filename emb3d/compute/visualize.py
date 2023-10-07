@@ -95,6 +95,8 @@ def generate_chart(
     else:
         chart = scatter_plot
 
+    chart = chart.interactive() | title_list
+
     zoom = alt.selection_interval(bind="scales", encodings=["x", "y"])
     return chart.add_selection(zoom)
 

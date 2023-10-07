@@ -5,6 +5,7 @@ import os
 import random
 import string
 import sys
+import webbrowser
 from io import StringIO
 from pathlib import Path
 from typing import Optional, TextIO
@@ -222,3 +223,6 @@ def visualize(
         embedding_file, n_clusters, title_field, display_mode
     )
     typer.echo(f"Visualization saved to {out_file}")
+
+    if typer.confirm("Open visualization in browser?"):
+        webbrowser.open_new_tab("file://" + os.path.abspath(out_file))
