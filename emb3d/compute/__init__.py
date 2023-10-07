@@ -4,7 +4,9 @@ Job Execution
 import asyncio
 import threading
 from pathlib import Path
+from typing import Optional
 
+import altair as alt
 import pandas as pd
 from rich import print
 from rich.console import Console
@@ -33,8 +35,8 @@ def execute(job: EmbedJob):
 
 def generate_html(
     embedding_file: Path,
-    n_clusters: int,
-    title_field: str,
+    min_cluster_size: int,
+    title_field: Optional[str],
     display_mode: VisualizeDisplayMode,
 ):
     with textui.SimpleProgressBar("Reading Data"):
@@ -43,19 +45,22 @@ def generate_html(
     n_records, n_dims = X.shape
     # Run dimensionality reduction
     with textui.SimpleProgressBar(
-        f"UMAP: Reducing Dimensions from {n_dims} to 2 for {n_records} records"
+        f"Mapping {n_records} records from {n_dims}-dimensional space to 2D (using: UMAP)."
     ):
         X_reduced = visualize.umap_reduce(X)
 
-    kmeans = None
-    if n_clusters > 0:
-        with textui.SimpleProgressBar(f"KMeans: Clustering into {n_clusters} clusters"):
-            kmeans = visualize.run_kmeans(X_reduced, n_clusters)
+    hdbscan_model = None
+    if min_cluster_size > 0:
+        with textui.SimpleProgressBar(
+            f"Clustering with min_cluster_size {min_cluster_size} (using: HDSCAN)."
+        ):
+            hdbscan_model = visualize.run_hdbscan(X_reduced, min_cluster_size)
 
     with textui.SimpleProgressBar("Generating Visualization"):
-        chart = visualize.generate_chart(X_reduced, titles, kmeans, display_mode)
+        chart = visualize.generate_chart(X_reduced, titles, hdbscan_model)
 
         out_fname = embedding_file.with_suffix(".2d.html")
 
-        chart.save(out_fname)
+        with alt.data_transformers.enable("default"):
+            chart.save(out_fname)
         return out_fname

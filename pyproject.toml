@@ -14,11 +14,12 @@ cohere = "^4.27"
 aiolimiter = "^1.1.0"
 httpx = "^0.25.0"
 openai = "^0.28.1"
-numpy = "*"
+numpy = "^1.25"
 sentence-transformers = "^2.2.2"
 pyyaml = "^6.0.1"
 pandas = "^2.1.1"
 altair = "^5.1.2"
+hdbscan = "^0.8.33"
 
 
 [tool.poetry.group.dev.dependencies]
