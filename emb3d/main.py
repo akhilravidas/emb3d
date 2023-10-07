@@ -6,6 +6,7 @@ import random
 import string
 import sys
 import webbrowser
+from enum import Enum
 from io import StringIO
 from pathlib import Path
 from typing import Optional, TextIO
@@ -14,11 +15,10 @@ import typer
 from rich.prompt import Prompt
 from typing_extensions import Annotated
 
-from emb3d import compute as compute_module
-from emb3d import reader
-from emb3d.config import AppConfig
-from emb3d.textui import SimpleProgressBar
-from emb3d.types import Backend, EmbedJob, ExecutionConfig, VisualizeDisplayMode
+from emb3d import compute, config, textui
+from emb3d.compute import visualize
+from emb3d.io import reader, writer
+from emb3d.types import Backend, EmbedJob, ExecutionConfig
 
 app = typer.Typer(add_completion=False)
 
@@ -63,7 +63,7 @@ def _output_file(
 
 
 def _pick_model(model_id: Optional[str]) -> str:
-    default_model = AppConfig.instance().default_model
+    default_model = config.AppConfig.instance().default_model
     return (
         model_id
         or default_model
@@ -92,11 +92,11 @@ def _execution_config(
         Backend.COHERE: "cohere_token",
         Backend.HUGGINGFACE: "huggingface_token",
     }
-    config = AppConfig.instance()
+    cfg = config.AppConfig.instance()
 
     api_key = (
         api_key
-        or config.get(config_keys[backend])
+        or cfg.get(config_keys[backend])
         or os.getenv(default_env_variables[backend])
     )
 
@@ -108,8 +108,8 @@ def _execution_config(
     return ExecutionConfig.remote(api_key=api_key)
 
 
-@app.command(help="Get or set a configuration value.")
-def config(
+@app.command("config", help="Get or set a configuration value.")
+def cmd_config(
     key: str = typer.Argument(
         ...,
         help="The configuration key to set or get. ex: `default_model`, `openai_token` etc..",
@@ -119,15 +119,15 @@ def config(
         help="The value associated with the key. If not provided, the current value will be printed.",
     ),
 ):
-    config = AppConfig.instance()
+    cfg = config.AppConfig.instance()
     if value is None:
-        current_value = config.get(key)
+        current_value = cfg.get(key)
         if current_value is not None:
             typer.echo(f"{key} = {current_value}")
         else:
             typer.echo(f"{key} is not set.")
     else:
-        config.set(key, value)
+        cfg.set(key, value)
         typer.echo(f"Saved new value for {key} to emb3d config.")
 
 
@@ -137,14 +137,14 @@ def new_job_id(length: int = 5) -> str:
     return "".join(random.choice(characters) for _ in range(length)).lower()
 
 
-@app.command(help="Compute embeddings for fun and profit.")
-def compute(
+@app.command("compute", help="Compute embeddings for fun and profit.")
+def cmd_compute(
     input_file: Optional[Path] = typer.Argument(
         ... if sys.stdin.isatty() else None,
         help="Path to the input file.",
     ),
     model: Optional[str] = typer.Option(
-        AppConfig.instance().default_model,
+        config.AppConfig.instance().default_model,
         help="Embedding model to use.",
     ),
     output_file: Optional[Path] = typer.Option(
@@ -195,34 +195,68 @@ def compute(
             execution_config=execution_mode,
         )
 
-        compute_module.execute(new_job)
+        compute.execute(new_job)
 
 
-@app.command(help="Visualize generated embeddings.")
-def visualize(
+class ClusterOption(str, Enum):
+    auto = "auto"
+    cluster = "cluster"
+    no_cluster = "no-cluster"
+
+
+@app.command("visualize", help="Visualize generated embeddings.")
+def cmd_visualize(
     embedding_file: Path = typer.Argument(
         ...,
         help="Path to the embedding file.",
     ),
-    n_clusters: int = typer.Option(
-        10,
-        help="Number of clusters to use for KMeans. Default is 10. If not provided, clustering will be skipped and points will be displayed directly.",
-    ),
-    title_field: Optional[str] = typer.Option(
+    min_cluster_size: Optional[int] = typer.Option(
         None,
-        help="Field to use for cluster titles. Default is `title` or `id`.",
+        help="Smallest size grouping that you wish to consider a cluster.",
     ),
-    display_mode: VisualizeDisplayMode = typer.Option(
-        VisualizeDisplayMode.EVERYTHING,
-        "--display-mode",
-        "-d",
-        help="Display mode to use. Default is `everything`.",
+    label_field: Optional[str] = typer.Option(
+        "title",
+        help="Field used to describe the record. If not provided, the `id` field (if present) or line numbers will be used.",
     ),
+    cluster: Annotated[
+        ClusterOption, typer.Option(case_sensitive=False)
+    ] = ClusterOption.auto,
 ):
-    out_file = compute_module.generate_html(
-        embedding_file, n_clusters, title_field, display_mode
-    )
-    typer.echo(f"Visualization saved to {out_file}")
+    with textui.SimpleProgressBar("Reading Data"):
+        X, labels = visualize.get_data(embedding_file, label_field)
 
-    if typer.confirm("Open visualization in browser?"):
+    n_records, n_dims = X.shape
+    typer.echo(f"Loaded {n_records} records with {n_dims} dimensions.")
+    with textui.SimpleProgressBar(
+        f"Mapping records from {n_dims}-dimensional space to 2D (using: UMAP)."
+    ):
+        X_reduced = visualize.umap_reduce(X)
+
+    needs_clustering = (
+        cluster != ClusterOption.no_cluster
+        and n_records > config.VISUALIZATION_CLUSTERING_THRESHOLD
+    )
+
+    if (
+        n_records > config.VISUALIZATION_CLUSTERING_THRESHOLD
+        and cluster != ClusterOption.cluster
+    ):
+        typer.echo(f"Too many records to visualize, clustering data...")
+
+    min_cluster_size = min_cluster_size or config.VISUALIZATION_DEFAULT_MIN_CLUSTER_SIZE
+    hdbscan_model = None
+    if needs_clustering:
+        with textui.SimpleProgressBar(
+            f"Clustering with min_cluster_size {min_cluster_size} (using: HDSCAN)."
+        ):
+            hdbscan_model = visualize.cluster_hdbscan(X_reduced, min_cluster_size)
+
+    with textui.SimpleProgressBar("Generating Scatter Plot"):
+        chart = visualize.generate_chart(X_reduced, labels, hdbscan_model)
+        out_file = embedding_file.with_suffix(".2d.html")
+        writer.chart2html(chart, out_file)
+
+    typer.echo(f"Visualization saved to {out_file}.")
+
+    if typer.confirm("View in browser?"):
         webbrowser.open_new_tab("file://" + os.path.abspath(out_file))

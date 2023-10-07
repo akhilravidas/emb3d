@@ -167,9 +167,3 @@ class Batch:
     inputs: List[str]
     embeddings: Optional[List[List[float]]] = None
     error: Optional[str] = None
-
-
-class VisualizeDisplayMode(Enum):
-    CLUSTERS = "clusters"
-    RECORDS = "records"
-    EVERYTHING = "everything"

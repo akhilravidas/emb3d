@@ -16,6 +16,9 @@ from emb3d.types import Backend
 # Scale down factor
 SCALE_DOWN_FACTOR = 0.8
 
+VISUALIZATION_CLUSTERING_THRESHOLD = 5000
+VISUALIZATION_DEFAULT_MIN_CLUSTER_SIZE = 10
+
 max_requests_limits = {
     Backend.OPENAI: 10000,
     Backend.COHERE: 1500,  # Using trial key values

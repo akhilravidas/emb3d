@@ -2,7 +2,8 @@ import json
 import logging
 from typing import Iterator
 
-from emb3d import client, reader
+from emb3d import client
+from emb3d.io import reader
 from emb3d.types import Batch, EmbedJob
 
 
