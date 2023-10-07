@@ -36,6 +36,8 @@ The default model is OpenAI's `text-embedding-ada-002`. You can change the model
 emb3d compute inputs.jsonl
 ```
 
+<img width="1050" alt="Xnapper-2023-10-06-16 15 47" src="https://github.com/akhilravidas/emb3d/assets/104069/a1939269-906f-4bf5-b10e-7771ec7d7556">
+
 You will need to have OPENAI_API_KEY set in your environment. You can also pass it as a flag (`--api_key`) or set it in a config file.
 
 ```sh:
@@ -50,14 +52,10 @@ emb3d compute inputs.jsonl --model-id embed-english-v2.0 --output-file cohere-em
 For COHERE models, you will need to have COHERE_API_KEY set in your environment. You can also pass it as a flag (`--api_key`) or set it in a config file with: `emb3d config set cohere_token YOUR-COHERE-API-KEY`.
 
 
+
 ### Visualize your embeddings 💥
 
-The last step is to visualize your embeddings. This will open a browser window with a visualization of your last computed embeddings.
-```sh
-emb3d visualize
-```
-
-You can alternatively pass the path to the computed embeddings file:
+The last step is to visualize your computed embeddings. This will open a browser window with a visualization of your last computed embeddings.
 
 ```sh
 emb3d visualize run-2020-embeddings.jsonl
@@ -109,5 +107,9 @@ emb3d visualize run-2020-embeddings.jsonl
 ```
 <img width="1050" alt="Xnapper-2023-10-06-15 30 13" src="https://github.com/akhilravidas/emb3d/assets/104069/41cd9b27-ff53-420f-bedf-a85c3d4c769d">
 
-<img width="1050" alt="Xnapper-2023-10-06-16 15 47" src="https://github.com/akhilravidas/emb3d/assets/104069/a1939269-906f-4bf5-b10e-7771ec7d7556">
 
+
+
+## Need help? 🙋
+
+Join our [Discord server](https://discord.gg/qncFtMxP) and lets talk!
