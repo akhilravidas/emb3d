@@ -16,7 +16,8 @@ from typing_extensions import Annotated
 from emb3d import compute as compute_module
 from emb3d import reader
 from emb3d.config import AppConfig
-from emb3d.types import Backend, EmbedJob, ExecutionConfig
+from emb3d.textui import SimpleProgressBar
+from emb3d.types import Backend, EmbedJob, ExecutionConfig, VisualizeDisplayMode
 
 app = typer.Typer(add_completion=False)
 
@@ -197,7 +198,27 @@ def compute(
 
 
 @app.command(help="Visualize generated embeddings.")
-def visualize(embedding_file: Optional[Path] = typer.Argument(...)):
-    # Read the JSON
-    # Run UMAP
-    pass
+def visualize(
+    embedding_file: Path = typer.Argument(
+        ...,
+        help="Path to the embedding file.",
+    ),
+    n_clusters: int = typer.Option(
+        10,
+        help="Number of clusters to use for KMeans. Default is 10. If not provided, clustering will be skipped and points will be displayed directly.",
+    ),
+    title_field: Optional[str] = typer.Option(
+        None,
+        help="Field to use for cluster titles. Default is `title` or `id`.",
+    ),
+    display_mode: VisualizeDisplayMode = typer.Option(
+        VisualizeDisplayMode.EVERYTHING,
+        "--display-mode",
+        "-d",
+        help="Display mode to use. Default is `everything`.",
+    ),
+):
+    out_file = compute_module.generate_html(
+        embedding_file, n_clusters, title_field, display_mode
+    )
+    typer.echo(f"Visualization saved to {out_file}")

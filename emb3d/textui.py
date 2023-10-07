@@ -6,7 +6,7 @@ import time
 
 from rich.live import Live
 from rich.panel import Panel
-from rich.progress import BarColumn, Progress, ProgressColumn, TextColumn
+from rich.progress import BarColumn, Progress, ProgressColumn, SpinnerColumn, TextColumn
 from rich.rule import Rule
 from rich.table import Table, box
 from rich.text import Text
@@ -133,3 +133,21 @@ def render_loop(tracker: JobTracker, progress: ProgressBar):
     )
 
     return table
+
+
+class SimpleProgressBar:
+    def __init__(self, text, transient=False):
+        self.text = text
+        self.progress = Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            transient=transient,
+        )
+
+    def __enter__(self):
+        self.task_id = self.progress.add_task(self.text, total=None)
+        self.progress.start()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.progress.stop()

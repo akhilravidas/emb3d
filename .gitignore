@@ -2,3 +2,4 @@ plan.txt
 *.jsonl
 __pycache__
 dist/
+*.2d.html
